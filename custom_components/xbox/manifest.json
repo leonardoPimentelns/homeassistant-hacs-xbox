@@ -1,0 +1,11 @@
+{
+    "domain": "custom_xbox",
+    "name": "Xbox",
+    "version": "1.0.0", 
+    "documentation": "https://github.com/leonardoPimentelns/xbox-webapi-python",
+    "zeroconf": [],
+    "requirements": ["xbox-webapi"], 
+    "homekit": {},
+    "dependencies": [],
+    "codeowners": []
+  }
