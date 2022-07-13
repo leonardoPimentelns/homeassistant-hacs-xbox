@@ -23,7 +23,7 @@ from xbox import *
 CLIENT_ID = 'client_id'
 CLIENT_SECRET = 'client_secret'
 TOKENS = 'tokens'
-UPDATE_FREQUENCY = timedelta(seconds=10)
+UPDATE_FREQUENCY = timedelta(seconds=5)
 ICON = "mdi:microsoft-xbox"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
