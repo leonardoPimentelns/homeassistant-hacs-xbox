@@ -111,7 +111,18 @@ async def async_main(config):
         boxArt = None
         title_name = None
         title_id = None
-        presence = await xbl_client.people.get_friends_own_batch(['2533274927773646'])
+        xuid = None
+        console_id = None
+
+        get_xuid= await xbl_client.presence.get_presence_own()
+        get_xuid = pd.DataFrame(get_xuid)
+        xuid = get_xuid[1][0]
+
+        get_console_id =  await xbl_client.smartglass.get_console_list()
+        get_console_id = pd.DataFrame(get_console_id)
+        console_id =  get_console_id[1][1][0].id
+
+        presence = await xbl_client.people.get_friends_own_batch([xuid])
         presence = pd.DataFrame(presence)
         for item in presence[1][0][0].presence_details:
             if (item.is_primary == True):
@@ -124,12 +135,14 @@ async def async_main(config):
         for item in get_title_info[1][1][0].images:
             if (item.type == 'BoxArt'):
                 boxArt =item.url
+            if (item.type == 'Tile'):
+                  boxArt =item.url
 
         description = get_title_info[1][1][0].detail.short_description
 
 
 
-        get_storage_devices = await xbl_client.smartglass.get_storage_devices('F4001F112BC1D01F')
+        get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
         get_storage_devices = pd.DataFrame(get_storage_devices)
 
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
@@ -139,13 +152,16 @@ async def async_main(config):
         total_space_bytes = round(get_storage_devices[1][1][0].total_space_bytes/1024.0**3)
         free_space_bytes = round(get_storage_devices[1][1][0].free_space_bytes/1024.0**3)
 
+
+
+
         attributes = {
         "title_name": title_name,
         "title_id": title_id,
         "description": description,
         "boxArt": boxArt,
         "free_space_bytes": free_space_bytes,
-        "total_space_bytes": total_space_bytes
+        "total_space_bytes": total_space_bytes,
 
         }
         return  attributes
