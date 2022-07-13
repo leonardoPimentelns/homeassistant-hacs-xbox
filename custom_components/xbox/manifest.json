@@ -1,6 +1,6 @@
 {
     "domain": "custom_xbox",
-    "name": "Xbox",
+    "name": "Custom Xbox",
     "version": "1.0.0", 
     "documentation": "https://github.com/leonardoPimentelns/xbox-webapi-python",
     "zeroconf": [],
