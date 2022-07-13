@@ -2,7 +2,6 @@
 
   "name": "Custom Xbox",
   "country": "BR",
-  "version": 1.0.1,
   "render_readme": true,
   "domains": ["sensor"]
 
