@@ -1,9 +1,8 @@
 {
 
-  "name": "Xbox",
-  "country": "BR",
-  "version": 1.0.1
-  "render_readme": true,
-  "domains": ["sensor"]
+  "name": "Custom Xbox",
+  "homeassistant": "2022.7.13",
+  "domains": ["sensor"], 
+  "render_readme": true
 
 }
