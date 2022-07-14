@@ -1,5 +1,6 @@
 """Platform for sensor integration."""
 from __future__ import annotations
+from os import truncate
 
 import voluptuous as vol
 from datetime import timedelta
@@ -13,8 +14,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_time_interval
 
-import sys
-from aiohttp import ClientSession
+from aiohttp import ClientSession,ClientResponseError
 from xbox.webapi.api.client import XboxLiveClient
 from xbox.webapi.authentication.manager import AuthenticationManager
 from xbox.webapi.authentication.models import OAuth2TokenResponse
@@ -35,7 +35,11 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
-    add_entities([CustomXbox(config)])
+    try:
+       add_entities([CustomXbox(config)])
+    except FileNotFoundError:
+          print('opa')
+
 
 
 class CustomXbox(SensorEntity):
@@ -55,7 +59,6 @@ class CustomXbox(SensorEntity):
     async def async_added_to_hass(self):
             """Start custom polling."""
 
-
             @callback
             def async_update(event_time=None):
                 """Update the entity."""
@@ -65,6 +68,7 @@ class CustomXbox(SensorEntity):
             async_track_time_interval(self.hass, async_update, UPDATE_FREQUENCY)
 
     async def async_update(self):
+         """Start async_update."""
          self.results =  await async_main(self.config )
          self._attr_native_value =  None
 
@@ -91,22 +95,16 @@ async def async_main(config):
             auth_mgr.oauth = OAuth2TokenResponse.parse_raw(tokens)
         except FileNotFoundError:
             print(f'File {tokens_file} isn`t found or it doesn`t contain tokens!')
-            exit(-1)
 
         try:
-              await auth_mgr.refresh_tokens()
+            await auth_mgr.refresh_tokens()
         except ClientResponseError:
               print("Could not refresh tokens")
-              sys.exit(-1)
 
         with open(tokens_file, mode="w") as f:
               f.write(auth_mgr.oauth.json())
         print(f'Refreshed tokens in {tokens_file}!')
         xbl_client = XboxLiveClient(auth_mgr)
-
-
-
-
 
         boxArt = None
         title_name = None
