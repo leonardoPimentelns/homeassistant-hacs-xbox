@@ -109,6 +109,7 @@ async def async_main(config):
         
         state_presence = None
         xuid = None
+        display_pic_raw = None
         console_id = None
         total_space = None
         free_space = None
@@ -129,8 +130,11 @@ async def async_main(config):
         
         presence = await xbl_client.people.get_friends_own_batch([xuid])
         presence = pd.DataFrame(presence)
+        
         primary_color = presence[1][0][0].preferred_color.primary_color
         secondary_color = presence[1][0][0].preferred_color.secondary_color
+        
+        display_pic_raw = presence[1][0][0].display_pic_raw
         
             
         
@@ -177,6 +181,7 @@ async def async_main(config):
         attributes = {
         "state_presence": state_presence,
         "xuid": xuid,
+        "display_pic_raw": display_pic_raw,
         "console_id": console_id,
         "total_space": total_space,
         "free_space": free_space,
