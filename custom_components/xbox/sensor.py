@@ -104,7 +104,7 @@ async def async_main(config):
         with open(tokens_file, mode="w") as f:
               f.write(auth_mgr.oauth.json())
         print(f'Refreshed tokens in {tokens_file}!')
-        
+
         xbl_client = XboxLiveClient(auth_mgr)
         
         state_presence = None
@@ -112,10 +112,12 @@ async def async_main(config):
         console_id = None
         total_space = None
         free_space = None
+        preferred_color= None
         title_id = None
         title_name = None
         title_box_art = None
         title_description= None
+       
         
      
         
@@ -123,6 +125,12 @@ async def async_main(config):
         get_xuid = pd.DataFrame(get_xuid)
         xuid = get_xuid[1][0]
         state_presence = get_xuid[1][1]
+        
+        presence = await xbl_client.people.get_friends_own_batch([xuid])
+        presence = pd.DataFrame(presence)
+        
+        preferred_color = presence[1][0][0].preferred_color
+        
         
         get_console_id =  await xbl_client.smartglass.get_console_list()
         get_console_id = pd.DataFrame(get_console_id)
@@ -136,8 +144,8 @@ async def async_main(config):
         
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
         get_installed_apps = pd.DataFrame(get_installed_apps)
-        presence = await xbl_client.people.get_friends_own_batch([xuid])
-        presence = pd.DataFrame(presence)
+       
+     
 
 
 
@@ -150,10 +158,9 @@ async def async_main(config):
             get_title_info = await xbl_client.titlehub.get_title_info(title_id)
             get_title_info = pd.DataFrame(get_title_info)
           
-
-         
+          
             for item in get_title_info[1][1][0].images:
-                if (item.type == 'Boxart'):
+                if (item.type == 'BoxArt'):
                     title_box_art =item.url
                 if (item.type == 'Tile'):
                     title_box_art =item.url
@@ -170,10 +177,12 @@ async def async_main(config):
         "console_id": console_id,
         "total_space": total_space,
         "free_space": free_space,
+        "preferred_color": preferred_color,
         "title_id": title_id,
         "title_name": title_name,
         "title_box_art": title_box_art,
         "title_description": title_description,
+       
 
         }
         return  attributes
