@@ -178,6 +178,8 @@ async def async_main(config):
                     title_box_art =item.url
               
             title_name = get_title_info[1][1][0].name
+            title_publisher_name =  get_title_info[1][1][0].detail.publisher_name
+            
             title_description = get_title_info[1][1][0].detail.short_description
 
 
@@ -195,6 +197,7 @@ async def async_main(config):
         "secondary_color": secondary_color,
         "title_id": title_id,
         "title_name": title_name,
+        "title_publisher_name": title_publisher_name,
         "title_box_art": title_box_art,
         "title_description": title_description,
         
