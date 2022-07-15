@@ -87,7 +87,7 @@ async def async_main(config):
     tokens_file = config[TOKENS] # replace with path in auth scrip or just paste file with tokens here
     async with ClientSession() as session:
         auth_mgr = AuthenticationManager(
-              session, CLIENT_ID, CLIENT_SECRET, "")
+              session, config[CLIENT_ID], config[CLIENT_SECRET], "")
 
         try:
             with open(tokens_file, mode="r") as f:
@@ -104,62 +104,77 @@ async def async_main(config):
         with open(tokens_file, mode="w") as f:
               f.write(auth_mgr.oauth.json())
         print(f'Refreshed tokens in {tokens_file}!')
+        
         xbl_client = XboxLiveClient(auth_mgr)
-
-        boxArt = None
-        title_name = None
-        title_id = None
+        
+        state_presence = None
         xuid = None
         console_id = None
-
+        total_space = None
+        free_space = None
+        title_id = None
+        title_name = None
+        title_box_art = None
+        title_description= None
+        
+     
+        
         get_xuid= await xbl_client.presence.get_presence_own()
         get_xuid = pd.DataFrame(get_xuid)
         xuid = get_xuid[1][0]
-
+        state_presence = get_xuid[1][1]
+        
         get_console_id =  await xbl_client.smartglass.get_console_list()
         get_console_id = pd.DataFrame(get_console_id)
         console_id =  get_console_id[1][1][0].id
-
-        presence = await xbl_client.people.get_friends_own_batch([xuid])
-        presence = pd.DataFrame(presence)
-        for item in presence[1][0][0].presence_details:
-            if (item.is_primary == True):
-                title_id =item.title_id
-                title_name =item.presence_text
-
-        get_title_info = await xbl_client.titlehub.get_title_info(title_id)
-        get_title_info = pd.DataFrame(get_title_info)
-
-        for item in get_title_info[1][1][0].images:
-            if (item.type == 'BoxArt'):
-                boxArt =item.url
-            if (item.type == 'Tile'):
-                  boxArt =item.url
-
-        description = get_title_info[1][1][0].detail.short_description
-
-
-
+        
         get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
         get_storage_devices = pd.DataFrame(get_storage_devices)
-
+        
+        total_space = round(get_storage_devices[1][1][0].total_space_bytes/1024.0**3)
+        free_space = round(get_storage_devices[1][1][0].free_space_bytes/1024.0**3)
+        
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
         get_installed_apps = pd.DataFrame(get_installed_apps)
+        presence = await xbl_client.people.get_friends_own_batch([xuid])
+        presence = pd.DataFrame(presence)
 
 
-        total_space_bytes = round(get_storage_devices[1][1][0].total_space_bytes/1024.0**3)
-        free_space_bytes = round(get_storage_devices[1][1][0].free_space_bytes/1024.0**3)
+
+        if (state_presence != 'Offline'):
+            for item in presence[1][0][0].presence_details:
+                if (item.is_primary == True):
+                    title_id =item.title_id 
+                    
+                    
+            get_title_info = await xbl_client.titlehub.get_title_info(title_id)
+            get_title_info = pd.DataFrame(get_title_info)
+          
+
+         
+            for item in get_title_info[1][1][0].images:
+                if (item.type == 'Boxart'):
+                    title_box_art =item.url
+                if (item.type == 'Tile'):
+                    title_box_art =item.url
+              
+            title_name = get_title_info[1][1][0].name
+            title_description = get_title_info[1][1][0].detail.short_description
 
 
 
 
         attributes = {
-        "title_name": title_name,
+        "state_presence": state_presence,
+        "xuid": xuid,
+        "console_id": console_id,
+        "total_space": total_space,
+        "free_space": free_space,
         "title_id": title_id,
-        "description": description,
-        "boxArt": boxArt,
-        "free_space_bytes": free_space_bytes,
-        "total_space_bytes": total_space_bytes,
+        "title_name": title_name,
+        "title_box_art": title_box_art,
+        "title_description": title_description,
 
         }
         return  attributes
+
