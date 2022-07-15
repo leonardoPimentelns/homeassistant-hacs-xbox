@@ -112,7 +112,8 @@ async def async_main(config):
         console_id = None
         total_space = None
         free_space = None
-        preferred_color= None
+        primary_color= None
+        secondary_color= None
         title_id = None
         title_name = None
         title_box_art = None
@@ -128,8 +129,10 @@ async def async_main(config):
         
         presence = await xbl_client.people.get_friends_own_batch([xuid])
         presence = pd.DataFrame(presence)
+        primary_color = presence[1][0][0].preferred_color.primary_color
+        secondary_color = presence[1][0][0].preferred_color.secondary_color
         
-        preferred_color = presence[1][0][0].preferred_color
+            
         
         
         get_console_id =  await xbl_client.smartglass.get_console_list()
@@ -177,13 +180,13 @@ async def async_main(config):
         "console_id": console_id,
         "total_space": total_space,
         "free_space": free_space,
-        "preferred_color": preferred_color,
+        "primary_color": primary_color,
+        "secondary_color": secondary_color,
         "title_id": title_id,
         "title_name": title_name,
         "title_box_art": title_box_art,
         "title_description": title_description,
-       
+        
 
         }
-        return  attributes
-
+        return attributes
