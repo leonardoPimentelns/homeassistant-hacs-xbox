@@ -110,6 +110,7 @@ async def async_main(config):
         state_presence = None
         xuid = None
         display_pic_raw = None
+        console_type = None
         console_id = None
         total_space = None
         free_space = None
@@ -139,9 +140,11 @@ async def async_main(config):
             
         
         
-        get_console_id =  await xbl_client.smartglass.get_console_list()
-        get_console_id = pd.DataFrame(get_console_id)
-        console_id =  get_console_id[1][1][0].id
+        get_console =  await xbl_client.smartglass.get_console_list()
+        get_console = pd.DataFrame(get_console)
+        
+        console_id =  get_console[1][1][0].id
+        console_type = get_console[1][1][0].console_type
         
         get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
         get_storage_devices = pd.DataFrame(get_storage_devices)
@@ -152,6 +155,8 @@ async def async_main(config):
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
         get_installed_apps = pd.DataFrame(get_installed_apps)
        
+   
+            
      
 
 
@@ -182,6 +187,7 @@ async def async_main(config):
         "state_presence": state_presence,
         "xuid": xuid,
         "display_pic_raw": display_pic_raw,
+        "console_type": console_type,
         "console_id": console_id,
         "total_space": total_space,
         "free_space": free_space,
@@ -195,3 +201,4 @@ async def async_main(config):
 
         }
         return attributes
+
