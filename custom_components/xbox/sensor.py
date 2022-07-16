@@ -118,6 +118,7 @@ async def async_main(config):
         secondary_color= None
         title_id = None
         title_name = None
+        title_publisher_name = None
         title_box_art = None
         title_description= None
        
