@@ -118,8 +118,11 @@ async def async_main(config):
         secondary_color= None
         title_id = None
         title_name = None
+        title_publisher_name= None
         title_box_art = None
         title_description= None
+        title_trailer= None
+        product_search= None
        
         
      
@@ -169,6 +172,11 @@ async def async_main(config):
                     
             get_title_info = await xbl_client.titlehub.get_title_info(title_id)
             get_title_info = pd.DataFrame(get_title_info)
+            
+         
+            
+           
+            
           
           
             for item in get_title_info[1][1][0].images:
@@ -179,6 +187,14 @@ async def async_main(config):
               
             title_name = get_title_info[1][1][0].name
             title_publisher_name =  get_title_info[1][1][0].detail.publisher_name
+            product_search = await xbl_client.catalog.product_search(title_name)
+            
+            product_search = pd.DataFrame(product_search)
+            product_search = product_search[1][0][0].products[0].product_id
+            
+            title_trailer =  await xbl_client.catalog.get_products([product_search])
+            title_trailer = pd.DataFrame(title_trailer)
+            title_trailer = title_trailer[1][2][0].localized_properties[0].videos[0].uri
             
             title_description = get_title_info[1][1][0].detail.short_description
 
@@ -198,10 +214,11 @@ async def async_main(config):
         "title_id": title_id,
         "title_name": title_name,
         "title_publisher_name": title_publisher_name,
-        "title_box_art": title_box_art,
         "title_description": title_description,
+        "title_box_art": title_box_art,
+        "title_trailer": title_trailer
         
 
         }
-        return attributes
+        return   attributes
 
