@@ -195,7 +195,8 @@ async def async_main(config):
             title_trailer =  await xbl_client.catalog.get_products([product_search])
             title_trailer = pd.DataFrame(title_trailer)
             title_trailer = title_trailer[1][2][0].localized_properties[0].videos[0].uri
-            
+            title_trailer = title_trailer.replace("http:","")
+                        
             title_description = get_title_info[1][1][0].detail.short_description
 
 
