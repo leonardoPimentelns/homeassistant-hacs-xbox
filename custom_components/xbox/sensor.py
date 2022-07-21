@@ -118,7 +118,11 @@ async def async_main(config):
         secondary_color= None
         title_id = None
         title_name = None
+<<<<<<< HEAD
         title_publisher_name= None
+=======
+        title_publisher_name = None
+>>>>>>> 10b327bf0f9b0c1d9579d400047ee36c8e8ab6c6
         title_box_art = None
         title_description= None
         title_trailer= None
@@ -187,8 +191,8 @@ async def async_main(config):
               
             title_name = get_title_info[1][1][0].name
             title_publisher_name =  get_title_info[1][1][0].detail.publisher_name
+
             product_search = await xbl_client.catalog.product_search(title_name)
-            
             product_search = pd.DataFrame(product_search)
             product_search = product_search[1][0][0].products[0].product_id
             
