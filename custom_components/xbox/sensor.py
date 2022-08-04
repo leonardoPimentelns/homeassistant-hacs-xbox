@@ -8,7 +8,7 @@ import pandas as pd
 from homeassistant.components.sensor import (
     SensorEntity
 )
-
+from xbox.webapi.api.provider.catalog.models import AlternateIdType, FieldsTemplate
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 import homeassistant.helpers.config_validation as cv
 from homeassistant.core import callback
@@ -105,7 +105,7 @@ async def async_main(config):
               f.write(auth_mgr.oauth.json())
         print(f'Refreshed tokens in {tokens_file}!')
 
-        xbl_client = XboxLiveClient(auth_mgr)
+         xbl_client = XboxLiveClient(auth_mgr)
         
         state_presence = None
         xuid = None
@@ -122,7 +122,7 @@ async def async_main(config):
         title_box_art = None
         title_description= None
         title_trailer= None
-        product_search= None
+        big_id=[]
        
         
      
@@ -157,12 +157,6 @@ async def async_main(config):
         
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
         get_installed_apps = pd.DataFrame(get_installed_apps)
-       
-   
-            
-     
-
-
 
         if (state_presence != 'Offline'):
             for item in presence[1][0][0].presence_details:
@@ -172,33 +166,35 @@ async def async_main(config):
                     
             get_title_info = await xbl_client.titlehub.get_title_info(title_id)
             get_title_info = pd.DataFrame(get_title_info)
-            
-         
-            
-           
-            
-          
-          
+
             for item in get_title_info[1][1][0].images:
                 if (item.type == 'BoxArt'):
                     title_box_art =item.url
                 if (item.type == 'Tile'):
                     title_box_art =item.url
-              
+                    
             title_name = get_title_info[1][1][0].name
             title_publisher_name =  get_title_info[1][1][0].detail.publisher_name
-            product_search = await xbl_client.catalog.product_search(title_name)
             
-            product_search = pd.DataFrame(product_search)
-            product_search = product_search[1][0][0].products[0].product_id
-            
-            title_trailer =  await xbl_client.catalog.get_products([product_search])
-            title_trailer = pd.DataFrame(title_trailer)
-            title_trailer = title_trailer[1][2][0].localized_properties[0].videos[0].uri
-            title_trailer = title_trailer.replace("http:","")
-                        
-            title_description = get_title_info[1][1][0].detail.short_description
 
+            title_description = get_title_info[1][1][0].detail.short_description
+            title_name = get_title_info[1][1][0].name
+            
+            get_big_id = await xbl_client.catalog.product_search(title_name,PlatformType.XBOX)
+            get_big_id = pd.DataFrame(get_big_id)
+            
+            
+            for item in get_big_id[1][0]:
+                if item.product_family_name == 'Games':
+                    big_id.append(item.products[0].product_id)
+                
+            title_trailer = await xbl_client.catalog.get_products(big_id,FieldsTemplate.DETAILS)
+            
+            if len(title_trailer.products[0].localized_properties[0].videos) > 0:
+                title_trailer = title_trailer.products[0].localized_properties[0].videos[0].uri
+                title_trailer = title_trailer.replace("http:","")
+            else:
+                title_trailer = None
 
 
 
@@ -221,5 +217,4 @@ async def async_main(config):
         
 
         }
-        return   attributes
-
+        return  attributes
