@@ -18,6 +18,12 @@ from aiohttp import ClientSession,ClientResponseError
 from xbox.webapi.api.client import XboxLiveClient
 from xbox.webapi.authentication.manager import AuthenticationManager
 from xbox.webapi.authentication.models import OAuth2TokenResponse
+from xbox.webapi.api.provider.catalog.models import (
+    AlternateIdType,
+    FieldsTemplate,
+    PlatformType,
+)
+
 from xbox import *
 
 CLIENT_ID = 'client_id'
