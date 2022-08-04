@@ -105,7 +105,7 @@ async def async_main(config):
               f.write(auth_mgr.oauth.json())
         print(f'Refreshed tokens in {tokens_file}!')
 
-         xbl_client = XboxLiveClient(auth_mgr)
+        xbl_client = XboxLiveClient(auth_mgr)
         
         state_presence = None
         xuid = None
@@ -128,63 +128,48 @@ async def async_main(config):
      
         
         get_xuid= await xbl_client.presence.get_presence_own()
-        get_xuid = pd.DataFrame(get_xuid)
-        xuid = get_xuid[1][0]
-        state_presence = get_xuid[1][1]
+        xuid = get_xuid.xuid
+        state_presence = get_xuid.state
         
         presence = await xbl_client.people.get_friends_own_batch([xuid])
-        presence = pd.DataFrame(presence)
-        
-        primary_color = presence[1][0][0].preferred_color.primary_color
-        secondary_color = presence[1][0][0].preferred_color.secondary_color
-        
-        display_pic_raw = presence[1][0][0].display_pic_raw
-        
-            
+        primary_color = presence.people[0].preferred_color.primary_color
+        secondary_color = presence.people[0].preferred_color.secondary_color
+        display_pic_raw = presence.people[0].display_pic_raw
         
         
         get_console =  await xbl_client.smartglass.get_console_list()
-        get_console = pd.DataFrame(get_console)
-        
-        console_id =  get_console[1][1][0].id
-        console_type = get_console[1][1][0].console_type
+        console_id = get_console.result[0].id
+        console_type = get_console.result[0].console_type
         
         get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
-        get_storage_devices = pd.DataFrame(get_storage_devices)
         
-        total_space = round(get_storage_devices[1][1][0].total_space_bytes/1024.0**3)
-        free_space = round(get_storage_devices[1][1][0].free_space_bytes/1024.0**3)
+        total_space = round(get_storage_devices.result[0].total_space_bytes/1024.0**3)
+        free_space = round(get_storage_devices.result[0].free_space_bytes/1024.0**3)
         
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
-        get_installed_apps = pd.DataFrame(get_installed_apps)
 
         if (state_presence != 'Offline'):
-            for item in presence[1][0][0].presence_details:
+            for item in presence.people[0].presence_details:
                 if (item.is_primary == True):
                     title_id =item.title_id 
                     
                     
             get_title_info = await xbl_client.titlehub.get_title_info(title_id)
-            get_title_info = pd.DataFrame(get_title_info)
-
-            for item in get_title_info[1][1][0].images:
+            
+            for item in get_title_info.titles[0].images:
                 if (item.type == 'BoxArt'):
                     title_box_art =item.url
                 if (item.type == 'Tile'):
                     title_box_art =item.url
                     
-            title_name = get_title_info[1][1][0].name
-            title_publisher_name =  get_title_info[1][1][0].detail.publisher_name
+            title_name = get_title_info.titles[0].name
+            title_publisher_name =  get_title_info.titles[0].detail.publisher_name
             
-
-            title_description = get_title_info[1][1][0].detail.short_description
-            title_name = get_title_info[1][1][0].name
+            title_description = get_title_info.titles[0].detail.short_description
             
             get_big_id = await xbl_client.catalog.product_search(title_name,PlatformType.XBOX)
-            get_big_id = pd.DataFrame(get_big_id)
             
-            
-            for item in get_big_id[1][0]:
+            for item in get_big_id.results:
                 if item.product_family_name == 'Games':
                     big_id.append(item.products[0].product_id)
                 
