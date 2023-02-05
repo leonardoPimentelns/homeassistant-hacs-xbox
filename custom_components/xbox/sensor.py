@@ -29,7 +29,7 @@ from xbox import *
 CLIENT_ID = 'client_id'
 CLIENT_SECRET = 'client_secret'
 TOKENS = 'tokens'
-UPDATE_FREQUENCY = timedelta(seconds=5)
+UPDATE_FREQUENCY = timedelta(seconds=10)
 ICON = "mdi:microsoft-xbox"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -44,7 +44,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     try:
        add_entities([CustomXbox(config)])
     except FileNotFoundError:
-          print('opa')
+          print('error')
 
 
 
@@ -123,15 +123,14 @@ async def async_main(config):
         primary_color= None
         secondary_color= None
         title_id = None
-        title_name = None
-        title_publisher_name= None
-        title_box_art = None
-        title_description= None
+        title_name = 'Xbox'
+        title_publisher_name= 'Microsoft'
+        title_box_art = 'https://assets.xboxservices.com/assets/03/58/03588087-344a-4902-92d9-b79e8c59974f.jpg?n=XGP-2023_Small-tout-1084_02-01-23_475x534.jpg'
+        title_description= 'Xbox Game Pass Play new games on day one. Plus, enjoy hundreds of high-quality games with friends on console, PC, or cloud. With games added all the time, there’s always something new to play.'
         title_trailer= None
         big_id=[]
-       
-        
-     
+        screenshot = 'https://assets.xboxservices.com/assets/03/58/03588087-344a-4902-92d9-b79e8c59974f.jpg?n=XGP-2023_Small-tout-1084_02-01-23_475x534.jpg'
+
         
         get_xuid= await xbl_client.presence.get_presence_own()
         xuid = get_xuid.xuid
@@ -164,9 +163,16 @@ async def async_main(config):
             
             for item in get_title_info.titles[0].images:
                 if (item.type == 'BoxArt'):
-                    title_box_art =item.url
+                    url_string = item.url.replace("http://", "https://")
+                    title_box_art =url_string
+                        
                 if (item.type == 'Tile'):
                     title_box_art =item.url
+                   
+                if (item.type == 'Screenshot'):
+                    url_string = item.url.replace("http://", "https://")
+                    screenshot = url_string
+                  
                     
             title_name = get_title_info.titles[0].name
             title_publisher_name =  get_title_info.titles[0].detail.publisher_name
@@ -204,6 +210,7 @@ async def async_main(config):
         "title_publisher_name": title_publisher_name,
         "title_description": title_description,
         "title_box_art": title_box_art,
+        "screenshot": screenshot,
         "title_trailer": title_trailer
         
 
