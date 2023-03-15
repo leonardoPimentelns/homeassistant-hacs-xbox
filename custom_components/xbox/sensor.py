@@ -118,6 +118,7 @@ async def async_main(config):
         display_pic_raw = None
         console_type = None
         console_id = None
+        console_name = None
         total_space = None
         free_space = None
         primary_color= None
@@ -125,33 +126,91 @@ async def async_main(config):
         title_id = None
         title_name = 'Xbox'
         title_publisher_name= 'Microsoft'
-        title_box_art = 'https://assets.xboxservices.com/assets/03/58/03588087-344a-4902-92d9-b79e8c59974f.jpg?n=XGP-2023_Small-tout-1084_02-01-23_475x534.jpg'
+        title_box_art = None
         title_description= 'Xbox Game Pass Play new games on day one. Plus, enjoy hundreds of high-quality games with friends on console, PC, or cloud. With games added all the time, there’s always something new to play.'
+        min_age = None
         title_trailer= None
         big_id=[]
-        screenshot = 'https://assets.xboxservices.com/assets/03/58/03588087-344a-4902-92d9-b79e8c59974f.jpg?n=XGP-2023_Small-tout-1084_02-01-23_475x534.jpg'
-
+        array_screenshot=[]
+        current_achievements = None
+        total_achievements = None
+        current_gamerscore = None
+        total_gamerscore = None
+        progress_percentage = None
+        my_games =[]
+        my_games_name = []
+        my_games_box_art = []
+       
+        
+     
         
         get_xuid= await xbl_client.presence.get_presence_own()
         xuid = get_xuid.xuid
         state_presence = get_xuid.state
         
+        
         presence = await xbl_client.people.get_friends_own_batch([xuid])
         primary_color = presence.people[0].preferred_color.primary_color
         secondary_color = presence.people[0].preferred_color.secondary_color
         display_pic_raw = presence.people[0].display_pic_raw
-        
+        title_box_art = display_pic_raw
         
         get_console =  await xbl_client.smartglass.get_console_list()
-        console_id = get_console.result[0].id
-        console_type = get_console.result[0].console_type
         
-        get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
+        if get_console is not None and len(get_console.result) > 0:
+            console_id = get_console.result[0].id
+            console_name = get_console.result[0].name
+            console_type = get_console.result[0].console_type
+            get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
+            total_space = round(get_storage_devices.result[0].total_space_bytes/1024.0**3)
+            free_space = round(get_storage_devices.result[0].free_space_bytes/1024.0**3)
+        else:
+            print("Please, register your xbox console")
+            
         
-        total_space = round(get_storage_devices.result[0].total_space_bytes/1024.0**3)
-        free_space = round(get_storage_devices.result[0].free_space_bytes/1024.0**3)
+        
         
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
+        
+        
+        apps = await xbl_client.smartglass.get_installed_apps()
+        games = {
+            game.one_store_product_id: game
+            for game in apps.result
+            if game.is_game and game.title_id
+        }
+
+        app_details = await xbl_client.catalog.get_products(
+            games.keys(),
+            FieldsTemplate.BROWSE,
+        )
+
+        images = {
+            prod.product_id: prod.localized_properties[0].images
+            for prod in app_details.products
+        }
+        
+       
+        for game_id, game in games.items():
+            name = game.name
+            my_games_name.append(name)
+        
+        for ima, image in images.items():
+            for i in image:
+                if i.image_purpose =='BoxArt':
+                    box_art= i.uri
+                    my_games_box_art.append(box_art)
+                  
+           
+                    
+        
+        for i in range(len(my_games_name)):
+            dados = {'name':my_games_name[i],'url':my_games_box_art[i]}
+            my_games.append(dados)
+          
+        
+
+
 
         if (state_presence != 'Offline'):
             for item in presence.people[0].presence_details:
@@ -160,22 +219,45 @@ async def async_main(config):
                     
                     
             get_title_info = await xbl_client.titlehub.get_title_info(title_id)
+           
+           
+         
+            
+            current_achievements = get_title_info.titles[0].achievement.current_achievements
+            total_achievements = get_title_info.titles[0].achievement.total_achievements
+            current_gamerscore = get_title_info.titles[0].achievement.current_gamerscore
+            total_gamerscore = get_title_info.titles[0].achievement.total_gamerscore
+            progress_percentage = get_title_info.titles[0].achievement.progress_percentage
+            
             
             for item in get_title_info.titles[0].images:
+                
+               
                 if (item.type == 'BoxArt'):
                     url_string = item.url.replace("http://", "https://")
                     title_box_art =url_string
                         
                 if (item.type == 'Tile'):
-                    title_box_art =item.url
-                   
+                    url_string = item.url.replace("http://", "https://")
+                    title_box_art = url_string
+                    
                 if (item.type == 'Screenshot'):
                     url_string = item.url.replace("http://", "https://")
-                    screenshot = url_string
+                    screenshot = {'url': url_string}
+                   
+                    array_screenshot.append(screenshot)
+                    array_screenshot = list({d['url']: d for d in array_screenshot}.values())
+                    
                   
                     
+            
+
+                  
+                
+              
             title_name = get_title_info.titles[0].name
             title_publisher_name =  get_title_info.titles[0].detail.publisher_name
+            min_age =  get_title_info.titles[0].detail.min_age
             
             title_description = get_title_info.titles[0].detail.short_description
             
@@ -201,6 +283,7 @@ async def async_main(config):
         "display_pic_raw": display_pic_raw,
         "console_type": console_type,
         "console_id": console_id,
+        "console_name":console_name,
         "total_space": total_space,
         "free_space": free_space,
         "primary_color": primary_color,
@@ -209,10 +292,21 @@ async def async_main(config):
         "title_name": title_name,
         "title_publisher_name": title_publisher_name,
         "title_description": title_description,
+        "min_age": min_age,
         "title_box_art": title_box_art,
-        "screenshot": screenshot,
-        "title_trailer": title_trailer
+        "title_trailer": title_trailer,
+        "screenshot": array_screenshot,
+        "current_achievements": current_achievements,
+        "total_achievements": total_achievements,
+        "current_gamerscore": current_gamerscore,
+        "total_gamerscore": total_gamerscore,
+        "progress_percentage": progress_percentage,
+        'my_games': my_games
+            
+            
+            
         
 
         }
-        return  attributes
+    
+        return  attributes  
