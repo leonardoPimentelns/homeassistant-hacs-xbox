@@ -113,8 +113,9 @@ async def async_main(config):
 
         xbl_client = XboxLiveClient(auth_mgr)
         
-        state_presence = None
+           state_presence = None
         xuid = None
+        gamertag = None
         display_pic_raw = None
         console_type = None
         console_id = None
@@ -150,6 +151,7 @@ async def async_main(config):
         
         
         presence = await xbl_client.people.get_friends_own_batch([xuid])
+        gamertag = presence.people[0].gamertag
         primary_color = presence.people[0].preferred_color.primary_color
         secondary_color = presence.people[0].preferred_color.secondary_color
         display_pic_raw = presence.people[0].display_pic_raw
@@ -220,6 +222,8 @@ async def async_main(config):
                     
             get_title_info = await xbl_client.titlehub.get_title_info(title_id)
            
+          
+           
            
          
             
@@ -243,10 +247,10 @@ async def async_main(config):
                     
                 if (item.type == 'Screenshot'):
                     url_string = item.url.replace("http://", "https://")
-                    screenshot = {'url': url_string}
+                    screenshot = {'screenshot': url_string}
                    
                     array_screenshot.append(screenshot)
-                    array_screenshot = list({d['url']: d for d in array_screenshot}.values())
+                    array_screenshot = list({d['screenshot']: d for d in array_screenshot}.values())
                     
                   
                     
@@ -280,6 +284,7 @@ async def async_main(config):
         attributes = {
         "state_presence": state_presence,
         "xuid": xuid,
+        "gamertag":gamertag,
         "display_pic_raw": display_pic_raw,
         "console_type": console_type,
         "console_id": console_id,
@@ -309,4 +314,4 @@ async def async_main(config):
 
         }
     
-        return  attributes  
+        return  attributes
