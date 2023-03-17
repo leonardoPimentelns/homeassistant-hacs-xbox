@@ -247,18 +247,12 @@ async def async_main(config):
                     
                 if (item.type == 'Screenshot'):
                     url_string = item.url.replace("http://", "https://")
-                    screenshot = {'screenshot': url_string}
+                    screenshot = {'url': url_string}
                    
                     array_screenshot.append(screenshot)
-                    array_screenshot = list({d['screenshot']: d for d in array_screenshot}.values())
+                    array_screenshot = list({d['url']: d for d in array_screenshot}.values())
                     
-                  
-                    
-            
-
-                  
-                
-              
+ 
             title_name = get_title_info.titles[0].name
             title_publisher_name =  get_title_info.titles[0].detail.publisher_name
             min_age =  get_title_info.titles[0].detail.min_age
