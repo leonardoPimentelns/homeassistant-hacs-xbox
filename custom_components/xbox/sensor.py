@@ -113,7 +113,7 @@ async def async_main(config):
 
         xbl_client = XboxLiveClient(auth_mgr)
         
-           state_presence = None
+        state_presence = None
         xuid = None
         gamertag = None
         display_pic_raw = None
