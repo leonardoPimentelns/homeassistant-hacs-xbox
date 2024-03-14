@@ -42,9 +42,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the sensor platform."""
     try:
-       add_entities([CustomXbox(config)])
+        add_entities([CustomXbox(config)])
     except FileNotFoundError:
-          print('error')
+        print('error')
 
 
 
@@ -91,26 +91,37 @@ class CustomXbox(SensorEntity):
 
 async def async_main(config):
     tokens_file = config[TOKENS] # replace with path in auth scrip or just paste file with tokens here
-    async with ClientSession() as session:
+    async with SignedSession() as session:
         auth_mgr = AuthenticationManager(
               session, config[CLIENT_ID], config[CLIENT_SECRET], "")
 
         try:
-            with open(tokens_file, mode="r") as f:
-                  tokens = f.read()
-            auth_mgr.oauth = OAuth2TokenResponse.parse_raw(tokens)
-        except FileNotFoundError:
-            print(f'File {tokens_file} isn`t found or it doesn`t contain tokens!')
+            with open(tokens_file) as f:
+                tokens = f.read()
+            # Assign gathered tokens
+            auth_mgr.oauth = OAuth2TokenResponse.model_validate_json(tokens)
+        except FileNotFoundError as e:
+            print(
+                f"File {tokens_file} isn`t found or it doesn`t contain tokens! err={e}"
+            )
+           
 
         try:
             await auth_mgr.refresh_tokens()
-        except ClientResponseError:
-              print("Could not refresh tokens")
+        except HTTPStatusError as e:
+            print(
+                f"""
+                Could not refresh tokens from {tokens_file}, err={e}\n
+                You might have to delete the tokens file and re-authenticate 
+                if refresh token is expired  """
+          
+            )
+           
 
+        # Save the refreshed/updated tokens
         with open(tokens_file, mode="w") as f:
-              f.write(auth_mgr.oauth.json())
-        print(f'Refreshed tokens in {tokens_file}!')
-
+            f.write(auth_mgr.oauth.json())
+        print(f"Refreshed tokens in {tokens_file}!")
         xbl_client = XboxLiveClient(auth_mgr)
         
         state_presence = None
