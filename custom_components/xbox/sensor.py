@@ -27,6 +27,8 @@ from xbox.webapi.api.provider.catalog.models import (
 
 from xbox import *
 
+
+
 CLIENT_ID = 'client_id'
 CLIENT_SECRET = 'client_secret'
 TOKENS = 'tokens'
@@ -93,8 +95,7 @@ class CustomXbox(SensorEntity):
 async def async_main(config):
     tokens_file = config[TOKENS] # replace with path in auth scrip or just paste file with tokens here
     async with SignedSession() as session:
-        auth_mgr = AuthenticationManager(
-              session, config[CLIENT_ID], config[CLIENT_SECRET], "")
+        auth_mgr = AuthenticationManager(session, config[CLIENT_ID], config[CLIENT_SECRET], "")
 
         try:
             with open(tokens_file) as f:
