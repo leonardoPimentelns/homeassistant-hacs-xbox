@@ -16,6 +16,7 @@ from homeassistant.helpers.event import async_track_time_interval
 
 from aiohttp import ClientSession,ClientResponseError
 from xbox.webapi.api.client import XboxLiveClient
+from xbox.webapi.common.signed_session import SignedSession
 from xbox.webapi.authentication.manager import AuthenticationManager
 from xbox.webapi.authentication.models import OAuth2TokenResponse
 from xbox.webapi.api.provider.catalog.models import (
