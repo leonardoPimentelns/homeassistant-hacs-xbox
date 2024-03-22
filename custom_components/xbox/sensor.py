@@ -1,33 +1,24 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
+import asyncio
+import logging
 
 import voluptuous as vol
 
-import logging
-
-_LOGGER = logging.getLogger(__name__)
-
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 import homeassistant.helpers.config_validation as cv
-from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-import json
 
 from xbox.webapi.api.provider.catalog.models import (
     FieldsTemplate,
     PlatformType,
 )
 
-from httpx import HTTPStatusError
 from xbox.webapi.api.client import XboxLiveClient
 from xbox.webapi.authentication.manager import AuthenticationManager
 from xbox.webapi.authentication.models import OAuth2TokenResponse
 from xbox.webapi.common.signed_session import SignedSession
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
-
 
 CLIENT_ID = 'client_id'
 CLIENT_SECRET = 'client_secret'
@@ -35,26 +26,21 @@ TOKENS_FILE = 'tokens'
 
 ICON = "mdi:microsoft-xbox"
 
-
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA.extend({
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CLIENT_ID): cv.string,
     vol.Required(CLIENT_SECRET): cv.string,
     vol.Required(TOKENS_FILE): cv.string
 })
 
+_LOGGER = logging.getLogger(__name__)
 
 
-
-def setup_platform(hass, config, add_entities, discovery_info=None):
-
-
-    entities = [XboxEntity(config)]
-    add_entities(entities)
-   
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    async_add_entities([XboxEntity(config)])
 
 
 class XboxEntity(SensorEntity):
-    def __init__(self,config):
+    def __init__(self, config):
         self._state = None
         self._end_time = None
         self._config = config
@@ -67,31 +53,28 @@ class XboxEntity(SensorEntity):
     def state(self):
         return self._state
 
-
     async def async_update(self):
-        get_xbox_data = await async_main(self._config)
-        
-        self._state = ''
-        self._end_time = get_xbox_data
+        try:
+            get_xbox_data = await async_main(self._config)
+            self._state = ''
+            self._end_time = get_xbox_data
+        except Exception as e:
+            _LOGGER.error("Error updating Xbox data: %s", e)
+            self._state = "unavailable"
 
     @property
     def extra_state_attributes(self):
         """Return device specific state attributes."""
         self._attributes = {
-            "events":   self._end_time    
+            "events": self._end_time
         }
-        return  self._attributes
-
-
-
-
+        return self._attributes
 
 
 async def async_main(config):
     client_id = config.get(CLIENT_ID)
     client_secret = config.get(CLIENT_SECRET)
     tokens_file = config.get(TOKENS_FILE)
-
 
     async with SignedSession() as session:
         auth_mgr = AuthenticationManager(session, client_id, client_secret, "")
@@ -100,16 +83,14 @@ async def async_main(config):
                 tokens = f.read()
             auth_mgr.oauth = OAuth2TokenResponse.parse_raw(tokens)
         except FileNotFoundError as e:
-            print(f"File {tokens_file} isn't found or it doesn't contain tokens! err={e}")
+            _LOGGER.error("File %s isn't found or it doesn't contain tokens! err=%s", tokens_file, e)
             return
 
-
-      
         await auth_mgr.refresh_tokens()
-        
+
         with open(tokens_file, mode="w") as f:
             f.write(auth_mgr.oauth.json())
-        print(f"Refreshed tokens in {tokens_file}!")
+        _LOGGER.info("Refreshed tokens in %s!", tokens_file)
 
         xbl_client = XboxLiveClient(auth_mgr)
 
@@ -129,7 +110,8 @@ async def async_main(config):
         title_publisher_name = "Microsoft"
         title_box_art = None
         title_description = (
-            "Xbox Game Pass Play new games on day one. Plus, enjoy hundreds of high-quality games with friends on console, PC, or cloud. With games added all the time, there’s always something new to play."
+            "Xbox Game Pass Play new games on day one. Plus, enjoy hundreds of high-quality games with friends on "
+            "console, PC, or cloud. With games added all the time, there’s always something new to play."
         )
         min_age = None
         title_trailer = None
@@ -163,9 +145,9 @@ async def async_main(config):
             console_type = get_console.result[0].console_type
             get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
             total_space = round(get_storage_devices.result[0].total_space_bytes / 1024.0 ** 3)
-            free_space = round(get_storage_devices.result[0].free_space_bytes / 1024.0 ** 3)
+            free_space = round(get_storage_devices.result[0].free_space_bytes / 1024.0 **3)
         else:
-            print("Please, register your Xbox console")
+            _LOGGER.error("Please, register your Xbox console")
             return
 
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
@@ -228,7 +210,18 @@ async def async_main(config):
                     array_screenshot = list({d['url']: d for d in array_screenshot}.values())
 
             title_name = get_title_info.titles[0].name
-            title_publisher_name = get_title_info.titles[0].detail.publisher_name
+
+            if get_title_info.titles and len(get_title_info.titles) > 0:
+                title = get_title_info.titles[0]
+                if title and title.detail and title.detail.publisher_name:
+                    # Accessing publisher_name
+                    title_publisher_name = title.detail.publisher_name
+                else:
+                    # Handling the case where publisher_name is None or not present
+                    title_publisher_name = "Unknown Publisher"
+            else:
+                title_publisher_name = "Unknown Publisher"
+
             min_age = get_title_info.titles[0].detail.min_age
             title_description = get_title_info.titles[0].detail.short_description
 
@@ -275,3 +268,4 @@ async def async_main(config):
         }
 
         return attributes
+
