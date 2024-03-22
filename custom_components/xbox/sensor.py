@@ -1,7 +1,6 @@
 """Platform for sensor integration."""
 from __future__ import annotations
 
-from os import truncate
 
 import voluptuous as vol
 
@@ -14,16 +13,12 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.components.sensor import PLATFORM_SCHEMA
-import asyncio
 import json
 
 from xbox.webapi.api.provider.catalog.models import (
     FieldsTemplate,
     PlatformType,
 )
-
-import asyncio
-import sys
 
 from httpx import HTTPStatusError
 from xbox.webapi.api.client import XboxLiveClient
@@ -32,11 +27,6 @@ from xbox.webapi.authentication.models import OAuth2TokenResponse
 from xbox.webapi.common.signed_session import SignedSession
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
-from homeassistant import util
-
-
-
-import importlib.util
 
 
 CLIENT_ID = 'client_id'
