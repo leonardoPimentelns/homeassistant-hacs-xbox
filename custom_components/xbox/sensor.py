@@ -2,137 +2,126 @@
 from __future__ import annotations
 
 from os import truncate
-from datetime import timedelta
+
 import voluptuous as vol
 
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 from homeassistant.components.sensor import SensorEntity
 import homeassistant.helpers.config_validation as cv
 from homeassistant.core import callback
 from homeassistant.helpers.event import async_track_time_interval
-
-from aiohttp import ClientSession, ClientResponseError
-from xbox.webapi.api.client import XboxLiveClient
-from xbox.webapi.common.signed_session import SignedSession
-from xbox.webapi.authentication.manager import AuthenticationManager
-
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
-
-from pydantic import BaseModel, Field
-from pydantic.dataclasses import dataclass
-
-from xbox.webapi.common.models import PascalCaseModel
+from homeassistant.components.sensor import PLATFORM_SCHEMA
+import asyncio
+import json
 
 from xbox.webapi.api.provider.catalog.models import (
-    AlternateIdType,
     FieldsTemplate,
     PlatformType,
 )
 
-from xbox import *
+import asyncio
+import sys
+
+from httpx import HTTPStatusError
+from xbox.webapi.api.client import XboxLiveClient
+from xbox.webapi.authentication.manager import AuthenticationManager
+from xbox.webapi.authentication.models import OAuth2TokenResponse
+from xbox.webapi.common.signed_session import SignedSession
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional
+from homeassistant import util
+
+
+
+import importlib.util
+
 
 CLIENT_ID = 'client_id'
 CLIENT_SECRET = 'client_secret'
-TOKENS = 'tokens'
-UPDATE_FREQUENCY = timedelta(seconds=10)
+TOKENS_FILE = 'tokens'
+
 ICON = "mdi:microsoft-xbox"
 
-PLATFORM_SCHEMA = vol.Schema({
+
+PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA.extend({
     vol.Required(CLIENT_ID): cv.string,
     vol.Required(CLIENT_SECRET): cv.string,
-    vol.Required(TOKENS): cv.string
+    vol.Required(TOKENS_FILE): cv.string
 })
 
+
+
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the sensor platform."""
-    try:
-        add_entities([CustomXbox(config)])
-    except FileNotFoundError:
-        print('error')
 
 
-class CustomXbox(SensorEntity):
-    """Representation of a Sensor."""
+    entities = [XboxEntity(config)]
+    add_entities(entities)
+   
 
-    def __init__(self, config):
-        self._attr_name = "Xbox"
-        self.results = None
-        self.config = config
+
+class XboxEntity(SensorEntity):
+    def __init__(self,config):
+        self._state = None
+        self._end_time = None
+        self._config = config
 
     @property
-    def should_poll(self):
-        """Return False as this entity has custom polling."""
-        return False
+    def name(self):
+        return 'Custom Xbox'
 
     @property
-    def icon(self):
-        """Return the icon to use in the frontend."""
-        return ICON
+    def state(self):
+        return self._state
 
-    async def async_added_to_hass(self):
-        """Start custom polling."""
-        @callback
-        def async_update(event_time=None):
-            """Update the entity."""
-            self.async_schedule_update_ha_state(True)
-
-        async_track_time_interval(self.hass, async_update, UPDATE_FREQUENCY)
 
     async def async_update(self):
-        """Start async_update."""
-        self.results = await async_main(self.config)
-        self._attr_native_value = 'Ativo'
+        get_xbox_data = await async_main(self._config)
+        
+        self._state = ''
+        self._end_time = get_xbox_data
 
     @property
     def extra_state_attributes(self):
         """Return device specific state attributes."""
-        return {"results": self.results}
+        self._attributes = {
+            "events":   self._end_time    
+        }
+        return  self._attributes
 
-def utc_now():
-    return datetime.now(timezone.utc)
 
 
-class OAuth2TokenResponse(BaseModel):
-    token_type: str
-    expires_in: int
-    scope: str
-    access_token: str
-    refresh_token: Optional[str] = None
-    user_id: str
-    issued: datetime = Field(default_factory=utc_now)
 
-    def is_valid(self) -> bool:
-        return (self.issued + timedelta(seconds=self.expires_in)) > utc_now()
+
 
 async def async_main(config):
-    tokens_file = config[TOKENS]
-    async with SignedSession() as session:
-        auth_mgr = AuthenticationManager(session, config[CLIENT_ID], config[CLIENT_SECRET], "")
+    client_id = config.get(CLIENT_ID)
+    client_secret = config.get(CLIENT_SECRET)
+    tokens_file = config.get(TOKENS_FILE)
 
+
+    async with SignedSession() as session:
+        auth_mgr = AuthenticationManager(session, client_id, client_secret, "")
         try:
             with open(tokens_file) as f:
                 tokens = f.read()
-            auth_mgr.oauth = OAuth2TokenResponse.model_validate_json(tokens)
+            auth_mgr.oauth = OAuth2TokenResponse.parse_raw(tokens)
         except FileNotFoundError as e:
             print(f"File {tokens_file} isn't found or it doesn't contain tokens! err={e}")
             return
 
-        
-        await auth_mgr.refresh_tokens()
-       
 
+      
+        await auth_mgr.refresh_tokens()
+        
         with open(tokens_file, mode="w") as f:
             f.write(auth_mgr.oauth.json())
         print(f"Refreshed tokens in {tokens_file}!")
 
         xbl_client = XboxLiveClient(auth_mgr)
-        attributes = {}
-
-       
-
-    
-
 
         state_presence = None
         xuid = None
