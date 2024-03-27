@@ -125,6 +125,7 @@ async def async_main(config):
         my_games = []
         my_games_name = []
         my_games_box_art = []
+        my_games_id = []
 
         get_xuid = await xbl_client.presence.get_presence_own()
         xuid = get_xuid.xuid
@@ -171,7 +172,9 @@ async def async_main(config):
 
         for game_id, game in games.items():
             name = game.name
+            id =game.one_store_product_id
             my_games_name.append(name)
+            my_games_id.append(id)
 
         for ima, image in images.items():
             for i in image:
@@ -180,7 +183,7 @@ async def async_main(config):
                     my_games_box_art.append(box_art)
 
         for i in range(len(my_games_name)):
-            data = {'name': my_games_name[i], 'url': my_games_box_art[i]}
+            data = {'id': my_games_id[i],'name': my_games_name[i], 'url': my_games_box_art[i]}
             my_games.append(data)
 
         if state_presence != 'Offline':
