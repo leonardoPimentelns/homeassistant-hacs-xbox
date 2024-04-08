@@ -42,7 +42,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 class XboxEntity(SensorEntity):
     def __init__(self, config):
         self._state = None
-        self._end_time = None
+        self._data = None
         self._config = config
 
     @property
@@ -55,9 +55,9 @@ class XboxEntity(SensorEntity):
 
     async def async_update(self):
         try:
-            get_xbox_data = await async_main(self._config)
-            self._state = ''
-            self._end_time = get_xbox_data
+            state_presence,get_xbox_data = await async_main(self._config)
+            self._state = state_presence
+            self._data = get_xbox_data
         except Exception as e:
             _LOGGER.error("Error updating Xbox data: %s", e)
             self._state = "unavailable"
@@ -66,7 +66,7 @@ class XboxEntity(SensorEntity):
     def extra_state_attributes(self):
         """Return device specific state attributes."""
         self._attributes = {
-            "events": self._end_time
+            "events": self._data
         }
         return self._attributes
 
@@ -110,8 +110,7 @@ async def async_main(config):
         title_publisher_name = "Microsoft"
         title_box_art = None
         title_description = (
-            "Xbox Game Pass Play new games on day one. Plus, enjoy hundreds of high-quality games with friends on "
-            "console, PC, or cloud. With games added all the time, there’s always something new to play."
+            "Xbox Game Pass Play new games on day one. Plus, enjoy hundreds of high-quality games with friends on console, PC, or cloud. With games added all the time, there’s always something new to play."
         )
         min_age = None
         title_trailer = None
@@ -125,7 +124,6 @@ async def async_main(config):
         my_games = []
         my_games_name = []
         my_games_box_art = []
-        my_games_id = []
 
         get_xuid = await xbl_client.presence.get_presence_own()
         xuid = get_xuid.xuid
@@ -142,13 +140,15 @@ async def async_main(config):
 
         if get_console and len(get_console.result) > 0:
             console_id = get_console.result[0].id
+            console_power_state = get_console.result[0].power_state
+
             console_name = get_console.result[0].name
             console_type = get_console.result[0].console_type
             get_storage_devices = await xbl_client.smartglass.get_storage_devices(console_id)
             total_space = round(get_storage_devices.result[0].total_space_bytes / 1024.0 ** 3)
-            free_space = round(get_storage_devices.result[0].free_space_bytes / 1024.0 **3)
+            free_space = round(get_storage_devices.result[0].free_space_bytes / 1024.0 ** 3)
         else:
-            _LOGGER.error("Please, register your Xbox console")
+            print("Please, register your Xbox console")
             return
 
         get_installed_apps = await xbl_client.smartglass.get_installed_apps()
@@ -160,87 +160,79 @@ async def async_main(config):
             if game.is_game and game.title_id
         }
 
-        app_details = await xbl_client.catalog.get_products(
-            games.keys(),
-            FieldsTemplate.BROWSE,
-        )
+        app_details = None
+        if games:
+            app_details = await xbl_client.catalog.get_products(
+                list(games.keys()),
+                FieldsTemplate.BROWSE,
+            )
 
-        images = {
-            prod.product_id: prod.localized_properties[0].images
-            for prod in app_details.products
-        }
+        if app_details:
+            images = {
+                prod.product_id: prod.localized_properties[0].images
+                for prod in app_details.products
+            }
 
-        for game_id, game in games.items():
-            name = game.name
-            id =game.one_store_product_id
-            my_games_name.append(name)
-            my_games_id.append(id)
+            for game_id, game in games.items():
+                name = game.name
+                my_games_name.append(name)
 
-        for ima, image in images.items():
-            for i in image:
-                if i.image_purpose == 'BoxArt':
-                    box_art = i.uri
-                    my_games_box_art.append(box_art)
+            for ima, image in images.items():
+                for i in image:
+                    if i.image_purpose == 'BoxArt':
+                        box_art = i.uri
+                        my_games_box_art.append(box_art)
 
-        for i in range(len(my_games_name)):
-            data = {'id': my_games_id[i],'name': my_games_name[i], 'url': my_games_box_art[i]}
-            my_games.append(data)
+            for i in range(len(my_games_name)):
+                data = {'name': my_games_name[i], 'url': my_games_box_art[i]}
+                my_games.append(data)
 
         if state_presence != 'Offline':
             for item in presence.people[0].presence_details:
                 if item.is_primary:
                     title_id = item.title_id
 
-            get_title_info = await xbl_client.titlehub.get_title_info(title_id)
+            if title_id:
+                get_title_info = await xbl_client.titlehub.get_title_info(title_id)
 
-            current_achievements = get_title_info.titles[0].achievement.current_achievements
-            total_achievements = get_title_info.titles[0].achievement.total_achievements
-            current_gamerscore = get_title_info.titles[0].achievement.current_gamerscore
-            total_gamerscore = get_title_info.titles[0].achievement.total_gamerscore
-            progress_percentage = get_title_info.titles[0].achievement.progress_percentage
+                current_achievements = get_title_info.titles[0].achievement.current_achievements
+                total_achievements = get_title_info.titles[0].achievement.total_achievements
+                current_gamerscore = get_title_info.titles[0].achievement.current_gamerscore
+                total_gamerscore = get_title_info.titles[0].achievement.total_gamerscore
+                progress_percentage = get_title_info.titles[0].achievement.progress_percentage
 
-            for item in get_title_info.titles[0].images:
-                if item.type == 'BoxArt':
-                    url_string = item.url.replace("http://", "https://")
-                    title_box_art = url_string
-                if item.type == 'Tile':
-                    url_string = item.url.replace("http://", "https://")
-                    title_box_art = url_string
-                if item.type == 'Screenshot':
-                    url_string = item.url.replace("http://", "https://")
-                    screenshot = {'url': url_string}
-                    array_screenshot.append(screenshot)
-                    array_screenshot = list({d['url']: d for d in array_screenshot}.values())
+                for item in get_title_info.titles[0].images:
+                    if item.type == 'BoxArt':
+                        url_string = item.url.replace("http://", "https://")
+                        title_box_art = url_string
+                    if item.type == 'Tile':
+                        url_string = item.url.replace("http://", "https://")
+                        title_box_art = url_string
+                    if item.type == 'Screenshot':
+                        url_string = item.url.replace("http://", "https://")
+                        screenshot = {'url': url_string}
+                        array_screenshot.append(screenshot)
+                        array_screenshot = list({d['url']: d for d in array_screenshot}.values())
 
-            title_name = get_title_info.titles[0].name
+                title_name = get_title_info.titles[0].name
+                title_publisher_name = get_title_info.titles[0].detail.publisher_name
+                min_age = get_title_info.titles[0].detail.min_age
+                title_description = get_title_info.titles[0].detail.short_description
 
-            if get_title_info.titles and len(get_title_info.titles) > 0:
-                title = get_title_info.titles[0]
-                if title and title.detail and title.detail.publisher_name:
-                    # Accessing publisher_name
-                    title_publisher_name = title.detail.publisher_name
-                else:
-                    # Handling the case where publisher_name is None or not present
-                    title_publisher_name = "Unknown Publisher"
-            else:
-                title_publisher_name = "Unknown Publisher"
+                get_big_id = await xbl_client.catalog.product_search(title_name, PlatformType.XBOX)
 
-            min_age = get_title_info.titles[0].detail.min_age
-            title_description = get_title_info.titles[0].detail.short_description
+                for item in get_big_id.results:
+                    if item.product_family_name == 'Games':
+                        big_id.append(item.products[0].product_id)
 
-            get_big_id = await xbl_client.catalog.product_search(title_name, PlatformType.XBOX)
+                if big_id:
+                    title_trailer = await xbl_client.catalog.get_products(big_id, FieldsTemplate.DETAILS)
 
-            for item in get_big_id.results:
-                if item.product_family_name == 'Games':
-                    big_id.append(item.products[0].product_id)
-
-            title_trailer = await xbl_client.catalog.get_products(big_id, FieldsTemplate.DETAILS)
-
-            if len(title_trailer.products[0].localized_properties[0].videos) > 0:
-                title_trailer = title_trailer.products[0].localized_properties[0].videos[0].uri
-                title_trailer = title_trailer.replace("http:", "")
-            else:
-                title_trailer = None
+                    if len(title_trailer.products[0].localized_properties[0].videos) > 0:
+                        title_trailer = title_trailer.products[0].localized_properties[0].videos[0].uri
+                        title_trailer = title_trailer.replace("http:", "")
+                    else:
+                        title_trailer = None
 
         attributes = {
             "state_presence": state_presence,
@@ -248,6 +240,7 @@ async def async_main(config):
             "gamertag": gamertag,
             "display_pic_raw": display_pic_raw,
             "console_type": console_type,
+            "console_power_state" : console_power_state,
             "console_id": console_id,
             "console_name": console_name,
             "total_space": total_space,
@@ -270,5 +263,4 @@ async def async_main(config):
             'my_games': my_games
         }
 
-        return attributes
-
+        return console_power_state, attributes
