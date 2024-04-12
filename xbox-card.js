@@ -51,43 +51,43 @@ class XboxCard extends LitElement {
         const stateObj = this.hass.states[ent];
         const entityId = this.config.entities;
         const state = this.hass.states[entityId];
-        this.images = state.attributes.events.screenshot;
+        this.images = state.attributes.screenshot;
 
         return state
           ? html`
               <div class="card">
                 <div class="image-container">
-                  <img class="game-image" src="${state.attributes.events.title_box_art}" alt="Game image" />
+                  <img class="game-image" src="${state.attributes.title_box_art}" alt="Game image" />
                   <img
                     class="console-icon"
                     src="https://cdn.iconscout.com/icon/free/png-256/xbox-49-722654.png?f=webp&w=256"
                     alt="Xbox Series S Icon"
                   />
                   <div class="gamerpic">
-                    <img src="${state.attributes.events.display_pic_raw}" alt="Gamerpic" />
+                    <img src="${state.attributes.display_pic_raw}" alt="Gamerpic" />
                    
                   </div>
                   
                 </div>
                 <div class="game-info">
-                  <h2 class="game-title">${state.attributes.events.title_name}</h2>
+                  <h2 class="game-title">${state.attributes.title_name}</h2>
                   <div class="game-details">
-                    <p class="game-publisher">${state.attributes.events.title_publisher_name}</p>
-                    <p class="game-age">${state.attributes.events.min_age}+</p>
+                    <p class="game-publisher">${state.attributes.title_publisher_name}</p>
+                    <p class="game-age">${state.attributes.min_age}+</p>
                   </div>
-                  <p class="game-description">${state.attributes.events.title_description}</p>
+                  <p class="game-description">${state.attributes.title_description}</p>
                   <div class="hd">
-                    <h1 class="console_name">${state.attributes.events.console_name}</h1>
+                    <h1 class="console_name">${state.attributes.console_name}</h1>
                     <progress
-                      max="${state.attributes.events.total_space}"
-                      value="${state.attributes.events.total_space - state.attributes.events.free_space}"
+                      max="${state.attributes.total_space}"
+                      value="${state.attributes.total_space - state.attributes.free_space}"
                       ></progress>
                     <br/>
-                    <span class="progress-label">${state.attributes.events.free_space}GB free of ${state.attributes.events.total_space}GB</span>
+                    <span class="progress-label">${state.attributes.free_space}GB free of ${state.attributes.total_space}GB</span>
                     <br/>
                   </div>
                   <div class="game-gallery">
-                    ${state.attributes.events.screenshot.map(
+                    ${state.attributes.screenshot.map(
                       (imageUrl) =>
                         html`<img
                           src="${imageUrl.url}"
