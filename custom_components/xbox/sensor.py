@@ -65,9 +65,8 @@ class XboxEntity(SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return device specific state attributes."""
-        self._attributes = {
-            "events": self._data
-        }
+        self._attributes = self._data
+        
         return self._attributes
 
 
