@@ -1,4 +1,3 @@
-"""Platform for sensor integration."""
 from __future__ import annotations
 
 import asyncio
@@ -10,11 +9,7 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.event import async_track_time_interval
 
-from xbox.webapi.api.provider.catalog.models import (
-    FieldsTemplate,
-    PlatformType,
-)
-
+from xbox.webapi.api.provider.catalog.models import FieldsTemplate, PlatformType
 from xbox.webapi.api.client import XboxLiveClient
 from xbox.webapi.authentication.manager import AuthenticationManager
 from xbox.webapi.authentication.models import OAuth2TokenResponse
@@ -34,42 +29,146 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 _LOGGER = logging.getLogger(__name__)
 
-
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    async_add_entities([XboxEntity(config)])
+    async_add_entities([
+        XboxUserSensor(config),
+        XboxCurrentGameSensor(config),
+        XboxDeviceSensor(config),
+        XboxGameLibrarySensor(config)
+    ])
 
-
-class XboxEntity(SensorEntity):
+class XboxUserSensor(SensorEntity):
     def __init__(self, config):
         self._state = None
-        self._data = None
+        self._attributes = None
         self._config = config
 
     @property
     def name(self):
-        return 'Custom Xbox'
+        return 'Xbox User Info'
 
     @property
     def state(self):
         return self._state
 
+    @property
+    def extra_state_attributes(self):
+        return self._attributes
+
     async def async_update(self):
-        try:
-            state_presence,get_xbox_data = await async_main(self._config)
-            self._state = state_presence
-            self._data = get_xbox_data
-        except Exception as e:
-            _LOGGER.error("Error updating Xbox data: %s", e)
-            self._state = "unavailable"
+        _, attributes = await async_main(self._config)
+        self._state = attributes.get('gamertag')
+        self._attributes = {
+            "gamertag": attributes.get('gamertag'),
+            "display_pic_raw": attributes.get('display_pic_raw'),
+            "primary_color": attributes.get('primary_color'),
+            "secondary_color": attributes.get('secondary_color'),
+            "state_presence": attributes.get('state_presence')
+        }
+class XboxCurrentGameSensor(SensorEntity):
+    def __init__(self, config):
+        self._state = None
+        self._attributes = None
+        self._config = config
+
+    @property
+    def name(self):
+        return 'Xbox Current Game'
+
+    @property
+    def state(self):
+        return self._state
 
     @property
     def extra_state_attributes(self):
-        """Return device specific state attributes."""
-        self._attributes = self._data
-        
         return self._attributes
 
+    async def async_update(self):
+        _, attributes = await async_main(self._config)
+        
+        # Certifique-se de pegar o valor correto para o título
+        title_name = attributes.get('title_name')  # Isso pode estar vazio se a API não retornar o título esperado
+        if not title_name: 
+            # Caso o título não tenha sido encontrado, defina um valor padrão ou tente buscar novamente
+            title_name = "No game currently playing"  # ou qualquer outra lógica
 
+        self._state = title_name
+        
+        self._attributes = {
+            "title_id": attributes.get('title_id'),
+            "title_publisher_name": attributes.get('title_publisher_name'),
+            "title_description": attributes.get('title_description'),
+            "title_box_art": attributes.get('title_box_art'),
+            "title_trailer": attributes.get('title_trailer'),
+            "screenshot": attributes.get('screenshot'),
+            "min_age": attributes.get("min_age"),
+            "current_achievements": attributes.get('current_achievements'),
+            "total_achievements": attributes.get('total_achievements'),
+            "current_gamerscore": attributes.get('current_gamerscore'),
+            "total_gamerscore": attributes.get('total_gamerscore'),
+            "progress_percentage": attributes.get('progress_percentage'),
+            "user_gamertag": attributes.get('gamertag'),
+            "user_xuid": attributes.get('xuid'),
+            "user_display_pic": attributes.get('display_pic_raw')
+        }
+
+class XboxDeviceSensor(SensorEntity):
+    def __init__(self, config):
+        self._state = "Xbox Device"
+        self._attributes = None
+        self._config = config
+
+    @property
+    def name(self):
+        return 'Xbox Device Info'
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        return self._attributes
+
+    async def async_update(self):
+        _, attributes = await async_main(self._config)
+        self._attributes = {
+            "console_type": attributes.get('console_type'),
+            "console_power_state": attributes.get('console_power_state'),
+            "console_id": attributes.get('console_id'),
+            "console_name": attributes.get('console_name'),
+            "total_space": attributes.get('total_space'),
+            "free_space": attributes.get('free_space')
+        }
+
+
+
+
+class XboxGameLibrarySensor(SensorEntity):
+    def __init__(self, config):
+        self._state = "Game Library"
+        self._attributes = None
+        self._config = config
+
+    @property
+    def name(self):
+        return 'Xbox Game Library'
+
+    @property
+    def state(self):
+        return self._state
+
+    @property
+    def extra_state_attributes(self):
+        return self._attributes
+
+    async def async_update(self):
+        _, attributes = await async_main(self._config)
+        self._attributes = {
+            "my_games": attributes.get('my_games')
+        }
+
+# Função principal para buscar os dados da API
 async def async_main(config):
     client_id = config.get(CLIENT_ID)
     client_secret = config.get(CLIENT_SECRET)
