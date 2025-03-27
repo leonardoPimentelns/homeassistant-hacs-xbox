@@ -4,7 +4,7 @@
     "version": "1.0.0", 
     "documentation": "https://github.com/leonardoPimentelns/xbox-webapi-python",
     "zeroconf": [],
-    "requirements": ["xbox-webapi","aiofiles","pydantic>=1.8.2,<2.0.0"], 
+    "requirements": ["xbox-webapi","aiofiles"], 
     "homekit": {},
     "dependencies": [],
     "codeowners": []
